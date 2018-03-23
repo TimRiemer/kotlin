@@ -75,9 +75,9 @@ artifacts.add(buildVersion.name, file(buildVersionFilePath)) {
     builtBy(writeBuildNumber)
 }
 
-val distKotlinHomeDir: String by rootProject.extra
+val distKotlinCompilerHomeDir: String by rootProject.extra
 
 val dist by task<Copy> {
     from(writeBuildNumber)
-    into(File(distKotlinHomeDir))
+    into(File(distKotlinCompilerHomeDir))
 }

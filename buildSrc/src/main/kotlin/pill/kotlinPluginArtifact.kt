@@ -108,7 +108,7 @@ fun generateKotlinPluginArtifactFile(rootProject: Project): PFile {
 
     // Copy kotlinc directory
     root.add(Directory("kotlinc").apply {
-        val kotlincDirectory = rootProject.extra["distKotlinHomeDir"].toString()
+        val kotlincDirectory = rootProject.extra["distKotlinCompilerHomeDir"].toString()
         add(DirectoryCopy(File(kotlincDirectory)))
     })
 

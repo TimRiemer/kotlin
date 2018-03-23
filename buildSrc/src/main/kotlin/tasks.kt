@@ -74,7 +74,7 @@ fun Project.projectTest(taskName: String = "test", body: Test.() -> Unit = {}): 
     environment("NO_FS_ROOTS_ACCESS_CHECK", "true")
     environment("PROJECT_CLASSES_DIRS", the<JavaPluginConvention>().sourceSets.getByName("test").output.classesDirs.asPath)
     environment("PROJECT_BUILD_DIR", buildDir)
-    systemProperty("jps.kotlin.home", rootProject.extra["distKotlinHomeDir"])
+    systemProperty("jps.kotlin.home", rootProject.extra["distKotlinCompilerHomeDir"])
     systemProperty("kotlin.ni", if (rootProject.hasProperty("newInferenceTests")) "true" else "false")
     body()
 }

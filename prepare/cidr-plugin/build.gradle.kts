@@ -8,11 +8,7 @@ apply {
     plugin("kotlin")
 }
 
-val ideaPluginDir: File by rootProject.extra
-val cidrPluginDir: File by rootProject.extra
-
 val kotlinPlugin by configurations.creating
-
 val pluginXmlPath = "META-INF/plugin.xml"
 
 dependencies {
@@ -46,10 +42,4 @@ val jar = runtimeJar {
         }
     }
     from(pluginXml) { into("META-INF") }
-}
-
-task<Copy>("cidrPlugin") {
-    into(cidrPluginDir)
-    from(ideaPluginDir) { exclude("lib/kotlin-plugin.jar") }
-    from(jar) { into("lib") }
 }

@@ -81,14 +81,18 @@ repositories {
     }
 }
 
+val cidrKotlinPlugin by configurations.creating
+
 dependencies {
     bootstrapCompileCfg(kotlinDep("compiler-embeddable", bootstrapKotlinVersion))
+
+    cidrKotlinPlugin(project(":prepare:cidr-plugin", "runtimeJar"))
 }
 
 val commonBuildDir = File(rootDir, "build")
 val distDir by extra("$rootDir/dist")
-val distKotlinHomeDir by extra("$distDir/kotlinc")
-val distLibDir = "$distKotlinHomeDir/lib"
+val distKotlinCompilerHomeDir by extra("$distDir/kotlinc")
+val distLibDir = "$distKotlinCompilerHomeDir/lib"
 val commonLocalDataDir = "$rootDir/local"
 val ideaSandboxDir = "$commonLocalDataDir/ideaSandbox"
 val ideaUltimateSandboxDir = "$commonLocalDataDir/ideaUltimateSandbox"
@@ -356,7 +360,7 @@ allprojects {
     }
 }
 
-val distTask = task<Copy>("dist") {
+val dist by task<Copy> {
     val childDistTasks = getTasksByName("dist", true) - this@task
     dependsOn(childDistTasks)
 
@@ -365,17 +369,16 @@ val distTask = task<Copy>("dist") {
     from(files("license")) { into("kotlinc/license") }
 }
 
-val compilerCopyTask = task<Copy>("idea-plugin-copy-compiler") {
-    dependsOn(distTask)
+val copyCompilerToIdeaPlugin by task<Copy> {
+    dependsOn(dist)
     into(ideaPluginDir)
     from(distDir) { include("kotlinc/**") }
 }
 
-task<Copy>("ideaPlugin") {
-    dependsOn(compilerCopyTask)
+val ideaPlugin by task<Task> {
+    dependsOn(copyCompilerToIdeaPlugin)
     val childIdeaPluginTasks = getTasksByName("ideaPlugin", true) - this@task
     dependsOn(childIdeaPluginTasks)
-    into("$ideaPluginDir/lib")
 }
 
 tasks {
@@ -391,6 +394,7 @@ tasks {
         doLast {
             delete(ideaPluginDir)
             delete(ideaUltimatePluginDir)
+            delete(cidrPluginDir)
         }
     }
 
@@ -519,18 +523,20 @@ tasks {
     "check" { dependsOn("test") }
 }
 
-fun CopySpec.compilerScriptPermissionsSpec() {
-    filesMatching("bin/*") { mode = 0b111101101 }
-    filesMatching("bin/*.bat") { mode = 0b110100100 }
+fun CopySpec.setExecutablePermissions() {
+    filesMatching("**/bin/*") { mode = 0b111101101 }
+    filesMatching("**/bin/*.bat") { mode = 0b110100100 }
 }
 
 val zipCompiler by task<Zip> {
+    dependsOn(dist)
     destinationDir = file(distDir)
     archiveName = "kotlin-compiler-$kotlinVersion.zip"
-    from(distKotlinHomeDir) {
-        into("kotlinc")
-        compilerScriptPermissionsSpec()
-    }
+
+    from(distKotlinCompilerHomeDir)
+    into("kotlinc")
+    setExecutablePermissions()
+
     doLast {
         logger.lifecycle("Compiler artifacts packed to $archivePath")
     }
@@ -561,15 +567,34 @@ val zipPlugin by task<Zip> {
     doFirst {
         if (destPath == null) throw GradleException("Specify target zip path with 'pluginZipPath' property")
     }
-    into("Kotlin") {
-        from("$src/kotlinc") {
-            into("kotlinc")
-            compilerScriptPermissionsSpec()
-        }
-        from(src) {
-            exclude("kotlinc")
-        }
+
+    from(src)
+    into("Kotlin")
+    setExecutablePermissions()
+
+    doLast {
+        logger.lifecycle("Plugin artifacts packed to $archivePath")
     }
+}
+
+val cidrPlugin by task<Copy> {
+    dependsOn(ideaPlugin)
+    into(cidrPluginDir)
+    from(ideaPluginDir) { exclude("lib/kotlin-plugin.jar") }
+    from(cidrKotlinPlugin) { into("lib") }
+}
+
+val zipCidrPlugin by task<Zip> {
+    val platformVersionName = "CIDR2018.2" // TODO: get number from `extra.versions`
+    val pluginZipName = "kotlin-plugin-$kotlinVersion-$platformVersionName.zip"
+
+    destinationDir = File("$distDir/artifacts/")
+    archiveName = pluginZipName
+
+    from(cidrPlugin)
+    into("Kotlin")
+    setExecutablePermissions()
+
     doLast {
         logger.lifecycle("Plugin artifacts packed to $archivePath")
     }
