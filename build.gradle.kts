@@ -553,20 +553,27 @@ val zipTestData by task<Zip> {
     }
 }
 
-val zipPlugin by task<Zip> {
-    val src = when (project.findProperty("pluginArtifactDir") as String?) {
-        "Kotlin" -> ideaPluginDir
-        "KotlinUltimate" -> ideaUltimatePluginDir
-        null -> if (project.hasProperty("ultimate")) ideaUltimatePluginDir else ideaPluginDir
-        else -> error("Unsupported plugin artifact dir")
-    }
-    val destPath = project.findProperty("pluginZipPath") as String?
-    val dest = File(destPath ?: "$buildDir/kotlin-plugin.zip")
-    destinationDir = dest.parentFile
-    archiveName = dest.name
-    doFirst {
-        if (destPath == null) throw GradleException("Specify target zip path with 'pluginZipPath' property")
-    }
+val isAndroidStudioPlugin = rootProject.extra.has("versions.androidStudioMajorVersion")
+val androidStudioMajorVersion = if (isAndroidStudioPlugin)
+    rootProject.extra["versions.androidStudioMajorVersion"] as? String
+else
+    null
+
+val platformYearVersion = rootProject.extra["versions.platformYearVersion"] as String
+
+val zipIdeaPlugin by task<Zip> {
+    // TODO: depend on ideaPlugin or ideaUltimatePlugin
+    val src = if (intellijUltimateEnabled) ideaUltimatePluginDir else ideaPluginDir
+
+    val platformVersionName = if (isAndroidStudioPlugin)
+        "Studio$androidStudioMajorVersion"
+    else
+        "IJ$platformYearVersion"
+
+    val pluginZipName = "kotlin-plugin-$kotlinVersion-$platformVersionName.zip"
+
+    destinationDir = File("$distDir/artifacts/")
+    archiveName = pluginZipName
 
     from(src)
     into("Kotlin")
@@ -585,7 +592,7 @@ val cidrPlugin by task<Copy> {
 }
 
 val zipCidrPlugin by task<Zip> {
-    val platformVersionName = "CIDR2018.2" // TODO: get number from `extra.versions`
+    val platformVersionName = "CIDR$platformYearVersion"
     val pluginZipName = "kotlin-plugin-$kotlinVersion-$platformVersionName.zip"
 
     destinationDir = File("$distDir/artifacts/")
@@ -597,6 +604,16 @@ val zipCidrPlugin by task<Zip> {
 
     doLast {
         logger.lifecycle("Plugin artifacts packed to $archivePath")
+    }
+}
+
+/*
+ * TODO: Use on CI server to build ide plugins
+ */
+val idePlugins by task<Task> {
+    dependsOn(zipIdeaPlugin)
+    if (!isAndroidStudioPlugin) {
+        dependsOn(zipCidrPlugin)
     }
 }
 

@@ -5,6 +5,26 @@ extra["versions.idea.NodeJS"] = "172.3757.32"
 //extra["versions.androidStudioRelease"] = "3.1.0.5"
 //extra["versions.androidStudioBuild"] = "173.4506631"
 
+
+val platformBuildVersion = extra["versions.intellijSdk"] as String
+val platformMajorVersion = platformBuildVersion.substring(0, 3)
+val platformYearVersion = "20${platformMajorVersion.substring(0, 2)}.${platformMajorVersion.substring(2, 3)}"
+
+extra["versions.platformMajorVersion"] = platformMajorVersion
+extra["versions.platformYearVersion"] = platformYearVersion
+
+val androidStudioMajorVersion = if (extra.has("versions.androidStudioRelease"))
+    (extra["versions.androidStudioRelease"] as? String)?.split(".")?.take(2)?.joinToString()
+else
+    null
+
+if (androidStudioMajorVersion != null) {
+    extra["versions.androidStudioMajorVersion"] = androidStudioMajorVersion
+}
+
+val platform = androidStudioMajorVersion?.replace(".", "")?.let { "AS$it" }
+        ?: platformMajorVersion
+
 val gradleJars = listOf(
     "gradle-api",
     "gradle-tooling-api",
@@ -13,14 +33,6 @@ val gradleJars = listOf(
     "gradle-core",
     "gradle-base-services-groovy"
 )
-
-val androidStudioVersion = if (extra.has("versions.androidStudioRelease"))
-    extra["versions.androidStudioRelease"]?.toString()?.replace(".", "")?.substring(0, 2)
-else
-    null
-
-val platform = androidStudioVersion?.let { "AS" + it }
-        ?: extra["versions.intellijSdk"].toString().substringBefore('.')
 
 when (platform) {
     "181" -> {
