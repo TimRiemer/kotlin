@@ -542,6 +542,30 @@ val zipCompiler by task<Zip> {
     }
 }
 
+val zipPlugin by task<Zip> {
+    val src = when (project.findProperty("pluginArtifactDir") as String?) {
+        "Kotlin" -> ideaPluginDir
+        "KotlinUltimate" -> ideaUltimatePluginDir
+        null -> if (project.hasProperty("ultimate")) ideaUltimatePluginDir else ideaPluginDir
+        else -> error("Unsupported plugin artifact dir")
+    }
+    val destPath = project.findProperty("pluginZipPath") as String?
+    val dest = File(destPath ?: "$buildDir/kotlin-plugin.zip")
+    destinationDir = dest.parentFile
+    archiveName = dest.name
+    doFirst {
+        if (destPath == null) throw GradleException("Specify target zip path with 'pluginZipPath' property")
+    }
+
+    from(src)
+    into("Kotlin")
+    setExecutablePermissions()
+
+    doLast {
+        logger.lifecycle("Plugin artifacts packed to $archivePath")
+    }
+}
+
 val zipTestData by task<Zip> {
     destinationDir = file(distDir)
     archiveName = "kotlin-test-data.zip"
@@ -607,7 +631,7 @@ val zipCidrPlugin by task<Zip> {
     }
 }
 
-/*
+/**
  * TODO: Use on CI server to build ide plugins
  */
 val idePlugins by task<Task> {
